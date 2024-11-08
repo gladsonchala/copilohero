@@ -1,6 +1,10 @@
-googlesearch-python
-bs4
 requests
+bs4
+yfinance
+googlesearch-python
 selenium
 pillow
-
+python-dotenv
+cloudflare-functions
+beautifulsoup4
+langchain

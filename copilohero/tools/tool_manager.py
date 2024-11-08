@@ -1,88 +1,54 @@
+# tools/tool_manager.py
+
 import requests
-from .github import get_github_user
-from .stock import (
-    get_current_stock_price,
-    get_company_profile,
-    get_analyst_recommendations,
-)
+from config.settings import Config
+from tools.github import GitHubTool
+from tools.stock import StockTool
+from tools.websearch import WebSearchTool
+from tools.crawler import CrawlerTool
+from tools.producthunt import ProductHuntTool
 
 class ToolManager:
-    def __init__(self, account_id, api_token):
-        self.account_id = account_id
-        self.api_token = api_token
-        self.url = f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/@hf/nousresearch/hermes-2-pro-mistral-7b"
-        self.tool_mapping = {
-            "getGithubUser": get_github_user,
-            "getCurrentStockPrice": get_current_stock_price,
-            "getCompanyProfile": get_company_profile,
-            "getAnalystRecommendations": get_analyst_recommendations,
-        }
-        self.tools = self.prepare_tools()
+    def __init__(self):
+        self.account_id = Config.ACCOUNT_ID
+        self.api_token = Config.API_TOKEN
+        self.url = Config.CLOUDFLARE_API_URL
 
-    def prepare_tools(self):
-        return [
-            {
-                "name": "getGithubUser",
-                "description": "Fetches publicly available information about a GitHub user.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "username": {
-                            "type": "string",
-                            "description": "The GitHub username."
-                        }
-                    },
-                    "required": ["username"]
-                },
-            },
-            {
-                "name": "getCurrentStockPrice",
-                "description": "Get the current stock price for a given symbol.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": "The stock symbol."
-                        }
-                    },
-                    "required": ["symbol"]
-                },
-            },
-            {
-                "name": "getCompanyProfile",
-                "description": "Get the company profile for a given symbol.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": "The stock symbol."
-                        }
-                    },
-                    "required": ["symbol"]
-                },
-            },
-            {
-                "name": "getAnalystRecommendations",
-                "description": "Get analyst recommendations for a given stock symbol.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "symbol": {
-                            "type": "string",
-                            "description": "The stock symbol."
-                        }
-                    },
-                    "required": ["symbol"]
-                },
-            },
-        ]
+        # Initialize available tools
+        self.tool_mapping = self.load_tools()
+
+    def load_tools(self):
+        """
+        Load all available tools into the tool mapping.
+        """
+        return {
+            "getGithubUser": GitHubTool(),
+            "getCurrentStockPrice": StockTool(),
+            "performWebSearch": WebSearchTool(),
+            "scrapeVisibleText": CrawlerTool(),
+            "getProductHuntTrending": ProductHuntTool(),
+        }
+
+    def prepare_tools_schema(self):
+        """
+        Prepare the tools schema for Cloudflare Function Calling.
+        """
+        tools_schema = []
+        for tool_name, tool_instance in self.tool_mapping.items():
+            tools_schema.append({
+                "name": tool_name,
+                "description": tool_instance.__doc__,
+                "parameters": tool_instance.get_schema()
+            })
+        return tools_schema
 
     def process_query(self, user_query):
+        """
+        Process the user query by calling Cloudflare's API.
+        """
         payload = {
             "messages": [{"role": "user", "content": user_query}],
-            "tools": self.tools,
+            "tools": self.prepare_tools_schema(),
         }
 
         headers = {
@@ -90,33 +56,37 @@ class ToolManager:
             "Authorization": f"Bearer {self.api_token}",
         }
 
+        # Make a POST request to Cloudflare API
         response = requests.post(self.url, json=payload, headers=headers)
-        print("Cloudflare API Response:", response.text)
 
         if response.status_code == 200:
             data = response.json()
             tool_calls = data.get("result", {}).get("tool_calls", [])
 
+            # Iterate over the tool calls and invoke corresponding tools
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name")
                 arguments = tool_call.get("arguments", {})
                 result = self.call_tool(tool_name, arguments)
                 print(f"Result from {tool_name}: {result}")
         else:
-            print("Error calling Cloudflare API:", response.status_code, response.text)
+            print(f"Error calling Cloudflare API: {response.status_code} - {response.text}")
 
     def call_tool(self, tool_name, arguments):
         """
-        Dynamically call a tool function based on the tool name.
+        Invoke the corresponding tool function based on the tool name.
 
         Args:
             tool_name (str): Name of the tool to call.
             arguments (dict): Arguments to pass to the tool.
 
         Returns:
-            Result from the tool function or an error message.
+            dict: Result from the tool function.
         """
-        func = self.tool_mapping.get(tool_name)
-        if func:
-            return func.invoke(input=arguments)
+        tool_instance = self.tool_mapping.get(tool_name)
+        if tool_instance:
+            try:
+                return tool_instance.invoke(arguments)
+            except Exception as e:
+                return {"error": f"Failed to invoke tool '{tool_name}': {str(e)}"}
         return {"error": f"Tool '{tool_name}' not found."}

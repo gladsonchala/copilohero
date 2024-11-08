@@ -1,64 +1,75 @@
+# tools/screenshoter.py
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from PIL import Image
+from tools.base_tool import BaseTool
 import time
 
-class WebpageScreenshot:
-    def __init__(self, url, width=1920, height=1080, zoom=1.0, output_path='screenshot.png'):
-        """
-        Initializes the WebpageScreenshot instance with preferences.
-        
-        :param url: URL of the webpage to capture.
-        :param width: Width of the browser window.
-        :param height: Height of the browser window.
-        :param zoom: Zoom level of the page.
-        :param output_path: Output path for the screenshot.
-        """
-        self.url = url
-        self.width = width
-        self.height = height
-        self.zoom = zoom
-        self.output_path = output_path
+class ScreenshotTool(BaseTool):
+    """
+    Captures a screenshot of a specified webpage URL.
+    """
 
-    def capture(self):
-        # Set up Chrome options for a headless browser
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument(f"--window-size={self.width},{self.height}")
-        
-        # Initialize WebDriver
-        driver = webdriver.Chrome(options=options)
-        
+    def invoke(self, input: dict) -> dict:
+        url = input.get("url")
+        output_path = input.get("output_path", "screenshot.png")
+        width = input.get("width", 1920)
+        height = input.get("height", 1080)
+
+        if not url:
+            return {"error": "URL parameter is required."}
+
         try:
-            # Open the webpage
-            driver.get(self.url)
-            time.sleep(2)  # Wait for the page to fully load
-            
-            # Set the zoom level with JavaScript
-            if self.zoom != 1.0:
-                driver.execute_script(f"document.body.style.zoom='{self.zoom}'")
+            # Setup headless Chrome options
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument(f"--window-size={width},{height}")
 
-            # Take a screenshot
-            screenshot_data = driver.get_screenshot_as_png()
+            # Initialize WebDriver
+            driver = webdriver.Chrome(options=options)
+            driver.get(url)
+            time.sleep(2)  # Wait for page load
 
-            # Save the screenshot
-            with open(self.output_path, 'wb') as file:
-                file.write(screenshot_data)
-            
-            # Open and confirm the screenshot as an image
-            screenshot = Image.open(self.output_path)
-            screenshot = screenshot.convert("RGB")
-            screenshot.save(self.output_path, "PNG")
-            
-            print(f"Screenshot saved as {self.output_path}")
-
-        finally:
+            # Capture screenshot
+            driver.save_screenshot(output_path)
             driver.quit()
 
-# Example usage:
-if __name__ == "__main__":
-    url = "https://teable.io"
-    screenshot = WebpageScreenshot(url, width=1080, height=720, zoom=1.0, output_path="example_screenshot.png")
-    screenshot.capture()
+            # Confirm screenshot creation
+            image = Image.open(output_path)
+            image.verify()
+            return {"status": "success", "path": output_path}
+        except Exception as e:
+            return {"error": f"Exception during screenshot capture: {str(e)}"}
+
+    def get_schema(self) -> dict:
+        """
+        Returns the JSON schema for the screenshot tool's input parameters.
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The URL of the webpage to capture."
+                },
+                "output_path": {
+                    "type": "string",
+                    "description": "The file path where the screenshot will be saved.",
+                    "default": "screenshot.png"
+                },
+                "width": {
+                    "type": "integer",
+                    "description": "The width of the browser window for capturing the screenshot.",
+                    "default": 1920
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "The height of the browser window for capturing the screenshot.",
+                    "default": 1080
+                }
+            },
+            "required": ["url"]
+        }
