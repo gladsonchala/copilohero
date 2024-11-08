@@ -1,0 +1,6 @@
+googlesearch-python
+bs4
+requests
+selenium
+pillow
+
