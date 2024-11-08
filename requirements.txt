@@ -5,6 +5,5 @@ googlesearch-python
 selenium
 pillow
 python-dotenv
-cloudflare-functions
 beautifulsoup4
 langchain
