@@ -88,7 +88,7 @@ class WebScraper:
 
 
 # Example usage
-user_url = input("Enter the URL to scrape: ")
-web_scraper = WebScraper(user_url)
-result = web_scraper.scrape_visible_text()
-print(result)
+# user_url = input("Enter the URL to scrape: ")
+# web_scraper = WebScraper(user_url)
+# result = web_scraper.scrape_visible_text()
+# print(result)
