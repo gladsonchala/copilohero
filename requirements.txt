@@ -6,3 +6,4 @@ selenium
 pillow
 python-dotenv
 beautifulsoup4
+deep_translator

@@ -9,6 +9,8 @@ from tools.websearch import WebSearchTool
 from tools.crawler import CrawlerTool
 from tools.producthunt import ProductHuntTool
 from tools.screenshoter import ScreenshotTool
+from tools.translator import TranslatorTool
+from tools.generic_ai_response import GenericAiResponseTool
 
 class ToolManager:
     def __init__(self):
@@ -30,6 +32,8 @@ class ToolManager:
             "scrapeVisibleText": CrawlerTool(),
             "getProductHuntTrending": ProductHuntTool(),
             "takeScreenshotOfWebPage": ScreenshotTool(),
+            "translateText": TranslatorTool(),
+            "genericAiResponse": GenericAiResponseTool(),
         }
 
     def prepare_tools_schema(self):
@@ -47,7 +51,7 @@ class ToolManager:
 
     def process_query(self, user_query):
         """
-        Process the user query by calling Cloudflare's API and then refine the response using AI.
+        Process the user query by calling Cloudflare's API and handle both tool calls and direct responses.
         """
         payload = {
             "messages": [{"role": "user", "content": user_query}],
@@ -59,27 +63,42 @@ class ToolManager:
             "Authorization": f"Bearer {self.api_token}",
         }
 
-        # Call Cloudflare API to determine which tool to invoke
-        response = requests.post(self.url, json=payload, headers=headers)
+        try:
+            # Call Cloudflare API to determine response
+            response = requests.post(self.url, json=payload, headers=headers)
+            response.raise_for_status()
+            # print(response.text)
 
-        if response.status_code == 200:
             data = response.json()
-            tool_calls = data.get("result", {}).get("tool_calls", [])
+            result = data.get("result", {})
 
-            for tool_call in tool_calls:
-                tool_name = tool_call.get("name")
-                arguments = tool_call.get("arguments", {})
-                raw_tool_output = self.call_tool(tool_name, arguments)
+            # Check if there is a direct AI response without tool invocation
+            if "response" in result:
+                # Direct response from AI without tool invocation
+                direct_message = result["response"]
+                print(f"{direct_message} ")
+                return
 
-                # Use AI to make the tool's raw output user-friendly
-                friendly_response = FriendlyAiResponse.get_friendly_response(
-                    user_query=user_query,
-                    tool_output=str(raw_tool_output)
-                )
-                
-                print(f"{friendly_response}\n")
-        else:
-            print(f"Error calling Cloudflare API: {response.status_code} - {response.text}")
+            # Handle tool calls if present
+            tool_calls = result.get("tool_calls", [])
+            if tool_calls:
+                for tool_call in tool_calls:
+                    tool_name = tool_call.get("name")
+                    arguments = tool_call.get("arguments", {})
+                    raw_tool_output = self.call_tool(tool_name, arguments)
+
+                    # Use AI to refine the tool's output for user-friendly response
+                    friendly_response = FriendlyAiResponse.get_friendly_response(
+                        user_query=user_query,
+                        tool_output=str(raw_tool_output)
+                    )
+                    print(f"{friendly_response} ")
+            else:
+                print("No tool calls were made, and no direct AI response was found.")
+
+        except Exception as e:
+            print(f"Error processing query: {str(e)}")
+
 
     def call_tool(self, tool_name, arguments):
         """
