@@ -72,13 +72,6 @@ class ToolManager:
             data = response.json()
             result = data.get("result", {})
 
-            # Check if there is a direct AI response without tool invocation
-            if "response" in result:
-                # Direct response from AI without tool invocation
-                direct_message = result["response"]
-                print(f"{direct_message} ")
-                return
-
             # Handle tool calls if present
             tool_calls = result.get("tool_calls", [])
             if tool_calls:
@@ -92,12 +85,19 @@ class ToolManager:
                         user_query=user_query,
                         tool_output=str(raw_tool_output)
                     )
-                    print(f"{friendly_response} ")
+                    print(f"{friendly_response}")
+                return
+
+            # Check for direct AI response
+            ai_response = result.get("response", None)
+            if ai_response:
+                print(f"{ai_response}")
             else:
-                print("No tool calls were made, and no direct AI response was found.")
+                print("No direct response from AI.")
 
         except Exception as e:
             print(f"Error processing query: {str(e)}")
+
 
 
     def call_tool(self, tool_name, arguments):
