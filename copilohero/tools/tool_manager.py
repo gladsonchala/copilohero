@@ -2,6 +2,7 @@
 
 import requests
 from config.settings import Config
+from utils.friendly_ai import FriendlyAiResponse
 from tools.github import GitHubTool
 from tools.stock import StockTool
 from tools.websearch import WebSearchTool
@@ -46,7 +47,7 @@ class ToolManager:
 
     def process_query(self, user_query):
         """
-        Process the user query by calling Cloudflare's API.
+        Process the user query by calling Cloudflare's API and then refine the response using AI.
         """
         payload = {
             "messages": [{"role": "user", "content": user_query}],
@@ -58,19 +59,25 @@ class ToolManager:
             "Authorization": f"Bearer {self.api_token}",
         }
 
-        # Make a POST request to Cloudflare API
+        # Call Cloudflare API to determine which tool to invoke
         response = requests.post(self.url, json=payload, headers=headers)
 
         if response.status_code == 200:
             data = response.json()
             tool_calls = data.get("result", {}).get("tool_calls", [])
 
-            # Iterate over the tool calls and invoke corresponding tools
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name")
                 arguments = tool_call.get("arguments", {})
-                result = self.call_tool(tool_name, arguments)
-                print(f"Result from {tool_name}: {result}")
+                raw_tool_output = self.call_tool(tool_name, arguments)
+
+                # Use AI to make the tool's raw output user-friendly
+                friendly_response = FriendlyAiResponse.get_friendly_response(
+                    user_query=user_query,
+                    tool_output=str(raw_tool_output)
+                )
+                
+                print(f"{friendly_response}\n")
         else:
             print(f"Error calling Cloudflare API: {response.status_code} - {response.text}")
 

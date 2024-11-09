@@ -53,11 +53,11 @@ class ScreenshotTool(BaseTool):
             "properties": {
                 "url": {
                     "type": "string",
-                    "description": "The URL of the webpage to capture."
+                    "description": "The URL of the webpage to capture(start with http:// or https://)."
                 },
                 "output_path": {
                     "type": "string",
-                    "description": "The file path where the screenshot will be saved.",
+                    "description": "The file path where the screenshot will be saved. use name of website as file name",
                     "default": "screenshot.png"
                 },
                 "width": {
