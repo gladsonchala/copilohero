@@ -11,7 +11,7 @@ class ProductHuntTool(BaseTool):
     """
 
     def invoke(self, input: dict) -> dict:
-        url = "https://www.producthunt.com/leaderboard/daily"
+        url = "https://www.producthunt.com/leaderboard/daily/2024/11/7/all"
         try:
             response = requests.get(url)
             if response.status_code != 200:

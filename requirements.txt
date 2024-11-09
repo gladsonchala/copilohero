@@ -6,4 +6,3 @@ selenium
 pillow
 python-dotenv
 beautifulsoup4
-langchain

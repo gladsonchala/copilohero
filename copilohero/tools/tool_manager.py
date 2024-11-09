@@ -7,6 +7,7 @@ from tools.stock import StockTool
 from tools.websearch import WebSearchTool
 from tools.crawler import CrawlerTool
 from tools.producthunt import ProductHuntTool
+from tools.screenshoter import ScreenshotTool
 
 class ToolManager:
     def __init__(self):
@@ -27,6 +28,7 @@ class ToolManager:
             "performWebSearch": WebSearchTool(),
             "scrapeVisibleText": CrawlerTool(),
             "getProductHuntTrending": ProductHuntTool(),
+            "takeScreenshotOfWebPage": ScreenshotTool(),
         }
 
     def prepare_tools_schema(self):

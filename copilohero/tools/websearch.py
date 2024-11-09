@@ -1,7 +1,7 @@
 # tools/websearch.py
 
 import logging
-from googlesearch import search
+from googlesearch import search, SearchResult
 from tools.base_tool import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -19,13 +19,29 @@ class WebSearchTool(BaseTool):
             return {"error": "Query parameter is required."}
 
         try:
-            # Perform Google search
-            search_results = search(query, num_results=num_results)
-            formatted_results = [
-                {"title": result.title, "url": result.url, "description": result.description}
-                for result in search_results
-            ]
+            # Perform Google search using advanced mode to get title, url, and description
+            search_results = search(query, num_results=num_results, sleep_interval=2, advanced=True)
+
+            # Format the search results
+            formatted_results = []
+            for result in search_results:
+                # Check if result is a SearchResult object
+                if isinstance(result, SearchResult):
+                    formatted_results.append({
+                        "title": result.title if result.title else "No Title",
+                        "url": result.url,
+                        "description": result.description if result.description else "No Description"
+                    })
+                else:
+                    # Handle the case where only a URL is returned
+                    formatted_results.append({
+                        "title": "No Title",
+                        "url": result,
+                        "description": "No Description"
+                    })
+
             return {"results": formatted_results}
+
         except Exception as e:
             logger.error(f"Error performing Google search: {str(e)}")
             return {"error": f"Exception during search: {str(e)}"}
