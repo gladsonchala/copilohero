@@ -55,7 +55,7 @@ class WebSearchTool(BaseTool):
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "The search query to perform."
+                    "description": "The search query to perform for up-to-date infos and future updates."
                 },
                 "num_results": {
                     "type": "integer",

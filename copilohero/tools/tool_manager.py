@@ -10,6 +10,7 @@ from tools.crawler import CrawlerTool
 from tools.producthunt import ProductHuntTool
 from tools.screenshoter import ScreenshotTool
 from tools.translator import TranslatorTool
+from tools.wikipedia_search import WikipediaSearchTool
 from tools.generic_ai_response import GenericAiResponseTool
 
 class ToolManager:
@@ -34,6 +35,7 @@ class ToolManager:
             "takeScreenshotOfWebPage": ScreenshotTool(),
             "translateText": TranslatorTool(),
             "genericAiResponse": GenericAiResponseTool(),
+            "wikipediaSearch": WikipediaSearchTool(),
         }
 
     def prepare_tools_schema(self):
